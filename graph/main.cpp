@@ -1,300 +1,364 @@
 #include <iostream>
-#include <cstring>
+#include <string>
+#include <climits>
+#include <limits> // For numeric_limits
 
-// Constants
-const int MAX_STATIONS = 100;
-const int MAX_NAME_LENGTH = 50;
+using namespace std;
 
-// Gas Station structure
+// ------------------- OPTIMIZED DATA STRUCTURES -------------------
 struct GasStation {
     int id;
-    char name[MAX_NAME_LENGTH];
-    float gas_price;
+    string subCity;
+    string exactLocation;
+    string name;
+    double price;
 };
 
-// Edge structure for adjacency list
-struct StationConnection {
-    int destination;
-    float distance;
-    StationConnection* next;
+struct Edge {
+    int toNode;
+    double weight;
+    Edge* next;
+
+    Edge(int to, double w) : toNode(to), weight(w), next(nullptr) {}
 };
 
-// Graph structure
-struct GasStationGraph {
-    GasStation stations[MAX_STATIONS];
-    StationConnection* adjacencyList[MAX_STATIONS];
-    int stationCount;
-    
-    GasStationGraph() : stationCount(0) {
-        for (int i = 0; i < MAX_STATIONS; ++i) {
-            adjacencyList[i] = nullptr;
+struct AdjacencyList {
+    Edge* head;
+    Edge* tail;
+
+    AdjacencyList() : head(nullptr), tail(nullptr) {}
+
+    void addEdge(int to, double weight) {
+        Edge* newEdge = new Edge(to, weight);
+        if (!head) {
+            head = tail = newEdge;
+        } else {
+            tail->next = newEdge;
+            tail = newEdge;
         }
     }
-};
 
-// Function prototypes
-void addStation(GasStationGraph& graph, const char* name, float price);
-void addConnection(GasStationGraph& graph, int src, int dest, float distance);
-void printStations(const GasStationGraph& graph);
-void printConnections(const GasStationGraph& graph, int stationId);
-void findCheapestGas(const GasStationGraph& graph);
-void findPath(const GasStationGraph& graph, int start, int end);
-void cleanupGraph(GasStationGraph& graph);
-
-int main() {
-    GasStationGraph graph;
-    
-    // Adding some sample stations
-    addStation(graph, "Shell", 3.45);
-    addStation(graph, "BP", 3.50);
-    addStation(graph, "Exxon", 3.40);
-    addStation(graph, "Chevron", 3.55);
-    addStation(graph, "Speedway", 3.38);
-    
-    // Adding connections
-    addConnection(graph, 0, 1, 5.2);  // Shell to BP, 5.2 miles
-    addConnection(graph, 0, 2, 3.8);  // Shell to Exxon, 3.8 miles
-    addConnection(graph, 1, 3, 7.1);  // BP to Chevron, 7.1 miles
-    addConnection(graph, 2, 3, 4.5);  // Exxon to Chevron, 4.5 miles
-    addConnection(graph, 2, 4, 2.3);  // Exxon to Speedway, 2.3 miles
-    addConnection(graph, 3, 4, 6.0);  // Chevron to Speedway, 6.0 miles
-    
-    // Menu system
-    int choice;
-    do {
-        std::cout << "\nGas Station Tracker\n";
-        std::cout << "1. List all stations\n";
-        std::cout << "2. Show station connections\n";
-        std::cout << "3. Find cheapest gas\n";
-        std::cout << "4. Find path between stations\n";
-        std::cout << "0. Exit\n";
-        std::cout << "Enter choice: ";
-        std::cin >> choice;
-        
-        switch (choice) {
-            case 1:
-                printStations(graph);
-                break;
-            case 2: {
-                int stationId;
-                std::cout << "Enter station ID: ";
-                std::cin >> stationId;
-                printConnections(graph, stationId);
-                break;
-            }
-            case 3:
-                findCheapestGas(graph);
-                break;
-            case 4: {
-                int start, end;
-                std::cout << "Enter start station ID: ";
-                std::cin >> start;
-                std::cout << "Enter end station ID: ";
-                std::cin >> end;
-                findPath(graph, start, end);
-                break;
-            }
-            case 0:
-                std::cout << "Exiting...\n";
-                break;
-            default:
-                std::cout << "Invalid choice. Try again.\n";
-        }
-    } while (choice != 0);
-    
-    cleanupGraph(graph);
-    return 0;
-}
-
-// Add a new gas station to the graph
-void addStation(GasStationGraph& graph, const char* name, float price) {
-    if (graph.stationCount >= MAX_STATIONS) {
-        std::cout << "Maximum number of stations reached.\n";
-        return;
-    }
-    
-    GasStation& newStation = graph.stations[graph.stationCount];
-    newStation.id = graph.stationCount;
-    strncpy(newStation.name, name, MAX_NAME_LENGTH - 1);
-    newStation.name[MAX_NAME_LENGTH - 1] = '\0';
-    newStation.gas_price = price;
-    
-    graph.stationCount++;
-}
-
-// Add a connection between two stations
-void addConnection(GasStationGraph& graph, int src, int dest, float distance) {
-    if (src < 0 || src >= graph.stationCount || dest < 0 || dest >= graph.stationCount) {
-        std::cout << "Invalid station ID.\n";
-        return;
-    }
-    
-    // Add connection from src to dest
-    StationConnection* newConnection = new StationConnection;
-    newConnection->destination = dest;
-    newConnection->distance = distance;
-    newConnection->next = graph.adjacencyList[src];
-    graph.adjacencyList[src] = newConnection;
-    
-    // Since roads are bidirectional, add connection from dest to src as well
-    newConnection = new StationConnection;
-    newConnection->destination = src;
-    newConnection->distance = distance;
-    newConnection->next = graph.adjacencyList[dest];
-    graph.adjacencyList[dest] = newConnection;
-}
-
-// Print all gas stations
-void printStations(const GasStationGraph& graph) {
-    std::cout << "\nList of Gas Stations:\n";
-    std::cout << "ID\tName\t\tPrice per gallon\n";
-    std::cout << "--------------------------------\n";
-    for (int i = 0; i < graph.stationCount; ++i) {
-        const GasStation& station = graph.stations[i];
-        std::cout << station.id << "\t" << station.name << "\t\t$" << station.gas_price << "\n";
-    }
-}
-
-// Print all connections for a specific station
-void printConnections(const GasStationGraph& graph, int stationId) {
-    if (stationId < 0 || stationId >= graph.stationCount) {
-        std::cout << "Invalid station ID.\n";
-        return;
-    }
-    
-    const GasStation& station = graph.stations[stationId];
-    std::cout << "\nConnections for " << station.name << " (ID: " << stationId << "):\n";
-    
-    StationConnection* current = graph.adjacencyList[stationId];
-    if (!current) {
-        std::cout << "No connections found.\n";
-        return;
-    }
-    
-    while (current) {
-        const GasStation& connectedStation = graph.stations[current->destination];
-        std::cout << "-> " << connectedStation.name << " (ID: " << current->destination 
-                  << "), Distance: " << current->distance << " miles\n";
-        current = current->next;
-    }
-}
-
-// Find and display the station with the cheapest gas
-void findCheapestGas(const GasStationGraph& graph) {
-    if (graph.stationCount == 0) {
-        std::cout << "No stations available.\n";
-        return;
-    }
-    
-    int cheapestId = 0;
-    for (int i = 1; i < graph.stationCount; ++i) {
-        if (graph.stations[i].gas_price < graph.stations[cheapestId].gas_price) {
-            cheapestId = i;
-        }
-    }
-    
-    const GasStation& cheapest = graph.stations[cheapestId];
-    std::cout << "\nCheapest gas found at " << cheapest.name 
-              << " (ID: " << cheapest.id << ") for $" << cheapest.gas_price << " per gallon\n";
-}
-
-// Simple path finding (Breadth-First Search)
-void findPath(const GasStationGraph& graph, int start, int end) {
-    if (start < 0 || start >= graph.stationCount || end < 0 || end >= graph.stationCount) {
-        std::cout << "Invalid station ID.\n";
-        return;
-    }
-    
-    if (start == end) {
-        std::cout << "Start and end stations are the same.\n";
-        return;
-    }
-    
-    // BFS implementation
-    bool visited[MAX_STATIONS] = {false};
-    int parent[MAX_STATIONS];
-    for (int i = 0; i < MAX_STATIONS; ++i) {
-        parent[i] = -1;
-    }
-    
-    int queue[MAX_STATIONS];
-    int front = 0, rear = 0;
-    
-    queue[rear++] = start;
-    visited[start] = true;
-    
-    bool found = false;
-    while (front < rear && !found) {
-        int current = queue[front++];
-        
-        StationConnection* neighbor = graph.adjacencyList[current];
-        while (neighbor && !found) {
-            int neighborId = neighbor->destination;
-            
-            if (!visited[neighborId]) {
-                visited[neighborId] = true;
-                parent[neighborId] = current;
-                queue[rear++] = neighborId;
-                
-                if (neighborId == end) {
-                    found = true;
-                }
-            }
-            
-            neighbor = neighbor->next;
-        }
-    }
-    
-    if (!found) {
-        std::cout << "No path exists between " << graph.stations[start].name 
-                  << " and " << graph.stations[end].name << ".\n";
-        return;
-    }
-    
-    // Reconstruct path
-    int path[MAX_STATIONS];
-    int pathLength = 0;
-    int current = end;
-    
-    while (current != -1) {
-        path[pathLength++] = current;
-        current = parent[current];
-    }
-    
-    // Print path in reverse order
-    std::cout << "\nPath from " << graph.stations[start].name << " to " 
-              << graph.stations[end].name << ":\n";
-    
-    for (int i = pathLength - 1; i >= 0; --i) {
-        std::cout << graph.stations[path[i]].name;
-        if (i > 0) {
-            // Calculate distance between this station and the next in path
-            int from = path[i];
-            int to = path[i-1];
-            StationConnection* conn = graph.adjacencyList[from];
-            while (conn && conn->destination != to) {
-                conn = conn->next;
-            }
-            
-            if (conn) {
-                std::cout << " --(" << conn->distance << " miles)--> ";
-            } else {
-                std::cout << " -> ";
-            }
-        }
-    }
-    std::cout << "\n";
-}
-
-// Clean up dynamically allocated memory
-void cleanupGraph(GasStationGraph& graph) {
-    for (int i = 0; i < MAX_STATIONS; ++i) {
-        StationConnection* current = graph.adjacencyList[i];
+    ~AdjacencyList() {
+        Edge* current = head;
         while (current) {
-            StationConnection* temp = current;
+            Edge* temp = current;
             current = current->next;
             delete temp;
         }
-        graph.adjacencyList[i] = nullptr;
     }
+};
+
+struct Graph {
+    GasStation* stations;
+    AdjacencyList* adjLists;
+    int capacity;
+    int size;
+
+    Graph(int cap) : capacity(cap), size(0) {
+        stations = new GasStation[capacity];
+        adjLists = new AdjacencyList[capacity];
+    }
+
+    ~Graph() {
+        delete[] stations;
+        delete[] adjLists;
+    }
+
+    void addStation(const GasStation& station) {
+        if (size >= capacity) return;
+        stations[size] = station;
+        size++;
+    }
+
+    void addEdge(int from, int to, double weight) {
+        if (from >= size || to >= size) return;
+        adjLists[from].addEdge(to, weight);
+        adjLists[to].addEdge(from, weight);
+    }
+
+    GasStation* getStation(int id) {
+        for (int i = 0; i < size; i++) {
+            if (stations[i].id == id) {
+                return &stations[i];
+            }
+        }
+        return nullptr;
+    }
+};
+
+// ------------------- OPTIMIZED PRIORITY QUEUE -------------------
+struct PQNode {
+    int stationId;
+    double distance;
+    PQNode* next;
+
+    PQNode(int id, double dist) : stationId(id), distance(dist), next(nullptr) {}
+};
+
+struct PriorityQueue {
+    PQNode* head;
+
+    PriorityQueue() : head(nullptr) {}
+
+    ~PriorityQueue() {
+        while (head) {
+            PQNode* temp = head;
+            head = head->next;
+            delete temp;
+        }
+    }
+
+    void push(int id, double dist) {
+        PQNode* newNode = new PQNode(id, dist);
+
+        if (!head || dist < head->distance) {
+            newNode->next = head;
+            head = newNode;
+        } else {
+            PQNode* current = head;
+            while (current->next && current->next->distance <= dist) {
+                current = current->next;
+            }
+            newNode->next = current->next;
+            current->next = newNode;
+        }
+    }
+
+    pair<int, double> pop() {
+        if (!head) return {-1, -1};
+        pair<int, double> result = {head->stationId, head->distance};
+        PQNode* temp = head;
+        head = head->next;
+        delete temp;
+        return result;
+    }
+
+    bool empty() {
+        return head == nullptr;
+    }
+};
+
+// ------------------- CORE FUNCTIONS -------------------
+double dijkstra(const Graph& graph, int start, int end) {
+    double* distances = new double[graph.size];
+    bool* visited = new bool[graph.size];
+
+    for (int i = 0; i < graph.size; i++) {
+        distances[i] = INT_MAX;
+        visited[i] = false;
+    }
+    distances[start] = 0;
+
+    PriorityQueue pq;
+    pq.push(start, 0);
+
+    while (!pq.empty()) {
+        auto current = pq.pop();
+        int u = current.first;
+        double dist = current.second;
+
+        if (u == end) {
+            double result = distances[u];
+            delete[] distances;
+            delete[] visited;
+            return result;
+        }
+
+        if (visited[u]) continue;
+        visited[u] = true;
+
+        Edge* edge = graph.adjLists[u].head;
+        while (edge) {
+            int v = edge->toNode;
+            double alt = dist + edge->weight;
+
+            if (alt < distances[v]) {
+                distances[v] = alt;
+                pq.push(v, alt);
+            }
+            edge = edge->next;
+        }
+    }
+
+    delete[] distances;
+    delete[] visited;
+    return INT_MAX;
+}
+
+void findNearestGasStation(const Graph& graph, int userNodeId) {
+    double minDistance = INT_MAX;
+    GasStation* nearestStation = nullptr;
+
+    for (int i = 0; i < graph.size; i++) {
+        if (i != userNodeId) {
+            double distance = dijkstra(graph, userNodeId, i);
+            if (distance < minDistance) {
+                minDistance = distance;
+                nearestStation = &graph.stations[i];
+            }
+        }
+    }
+
+    if (nearestStation) {
+        cout << "\nNearest Gas Station: " << nearestStation->name
+             << " (" << nearestStation->subCity << ")\n";
+        cout << "Distance: " << minDistance << " km\n";
+    } else {
+        cout << "\nNo gas stations found.\n";
+    }
+}
+
+// ------------------- USER INTERFACE -------------------
+void addGasStation(Graph& graph, int userNodeId, int& nextId) {
+    string subCity, exactLocation, name;
+    double price;
+
+    cout << "\nEnter Gas Station Name: ";
+    cin.ignore();
+    getline(cin, name);
+
+    cout << "Enter Sub-City (Woreda): ";
+    getline(cin, subCity);
+
+    cout << "Enter Exact Location: ";
+    getline(cin, exactLocation);
+
+    cout << "Enter Price: ";
+    cin >> price;
+
+    GasStation newStation = {nextId++, subCity, exactLocation, name, price};
+    graph.addStation(newStation);
+    graph.addEdge(userNodeId, newStation.id, 10.0);
+
+    cout << "\nGas Station '" << name << "' added successfully.\n";
+}
+
+int main() {
+    const int MAX_STATIONS = 100;
+    Graph graph(MAX_STATIONS);
+    int nextId = 0;
+
+    // Initialize Gondar gas stations
+    graph.addStation({nextId++, "Fasil/Piazza", "Near the main Piazza", "Total Ethiopia", 56.50});
+    graph.addStation({nextId++, "Fasil/Arada", "Bahir Dar Highway", "Shell Gondar", 57.75});
+    graph.addStation({nextId++, "Arada/Maraki", "Near University", "NOC", 56.60});
+    graph.addStation({nextId++, "Azezo", "Debark Road", "Yetebaberut", 58.80});
+    graph.addStation({nextId++, "Fasil", "Near Fasil Ghebbi", "Kobil", 58.90});
+    graph.addStation({nextId++, "Arada", "Main bus station", "Oilibya", 57.70});
+    graph.addStation({nextId++, "Maraki", "Western exit", "Gulf Oil", 58.85});
+
+    // Add connections
+    graph.addEdge(0, 1, 5.0);  // Total to Shell
+    graph.addEdge(1, 2, 3.0);  // Shell to NOC
+    graph.addEdge(2, 3, 10.0); // NOC to Yetebaberut
+    graph.addEdge(0, 4, 1.5);  // Total to Kobil
+    graph.addEdge(4, 5, 4.0);  // Kobil to Oilibya
+    graph.addEdge(5, 6, 7.0);  // Oilibya to Gulf Oil
+
+    // User setup
+    string validSubCities[] = {"Fasil", "Arada", "Maraki", "Azezo", "Gondar Town"};
+    string userSubCity;
+
+    // Display available sub-cities before anything else
+    cout << "Available Sub-Cities (Woredas):\n";
+    for (const auto& city : validSubCities) {
+        cout << "- " << city << endl;
+    }
+
+    // Add user node
+    int userNodeId = nextId++;
+    graph.addStation({userNodeId, "User Location", "User Location", "User", 0}); // Default location
+
+    // Main menu
+    int choice;
+    do {
+        cout << "\nGondar Gas Station Tracker\n";
+        cout << "1. List all stations\n";
+        cout << "2. Find nearest station\n";
+        cout << "3. Find cheapest gas\n";
+        cout << "4. Find path between stations\n";
+        cout << "5. Add new station\n";
+        cout << "0. Exit\n";
+        cout << "Choice: ";
+        cin >> choice;
+
+        switch (choice) {
+            case 1: {
+                cout << "\nList of all Gas Stations:\n";
+                for (int i = 0; i < graph.size - 1; i++) {
+                    double dist = dijkstra(graph, userNodeId, i);
+                    cout << graph.stations[i].id << ": " << graph.stations[i].name
+                         << " (" << graph.stations[i].subCity << ") - "
+                         << graph.stations[i].price << " ETB, Distance from user: " << dist << " km\n";
+                }
+                break;
+            }
+            case 2: {
+                cout << "\nEnter your current Sub-City (Woreda): ";
+                cin.ignore();
+                getline(cin, userSubCity);
+
+                bool validSubCity = false;
+                for(const auto& city : validSubCities){
+                  if(city == userSubCity){
+                    validSubCity = true;
+                    break;
+                  }
+                }
+                if(!validSubCity){
+                  cout << "Error: Invalid Sub-City entered. Please try again.\n";
+                  break;
+                }
+                graph.stations[userNodeId].subCity = userSubCity;
+
+                for (int i = 0; i < graph.size - 1; i++) {
+                    double distance = (graph.stations[i].subCity == userSubCity) ? 2.0 :
+                                      (graph.stations[i].subCity == "Azezo" || userSubCity == "Azezo") ? 12.0 : 8.0;
+                    graph.addEdge(userNodeId, i, distance);
+                }
+                findNearestGasStation(graph, userNodeId);
+                break;
+            }
+            case 3: {
+                double minPrice = numeric_limits<double>::max();
+                GasStation* cheapest = nullptr;
+                for (int i = 0; i < graph.size - 1; i++) {
+                    if (graph.stations[i].price < minPrice) {
+                        minPrice = graph.stations[i].price;
+                        cheapest = &graph.stations[i];
+                    }
+                }
+                if (cheapest) {
+                    cout << "\nCheapest Gas Station: " << cheapest->name << " at "
+                         << cheapest->price << " ETB\n";
+                } else {
+                  cout << "\nNo Gas stations found.\n";
+                }
+                break;
+            }
+            case 4: {
+                int start, end;
+                cout << "Enter start station ID: ";
+                cin >> start;
+                cout << "Enter end station ID: ";
+                cin >> end;
+                if(start < 0 || start >= graph.size || end < 0 || end >= graph.size){
+                  cout << "Error: Invalid station IDs.\n";
+                  break;
+                }
+                double dist = dijkstra(graph, start, end);
+                if (dist < INT_MAX) {
+                    cout << "Distance between station " << start << " and station " << end << " is: " << dist << " km\n";
+                } else {
+                    cout << "No path exists between station " << start << " and station " << end << ".\n";
+                }
+                break;
+            }
+            case 5:
+                addGasStation(graph, userNodeId, nextId);
+                break;
+        }
+    } while (choice != 0);
+
+    return 0;
 }
