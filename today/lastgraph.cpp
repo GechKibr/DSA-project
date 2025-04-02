@@ -1,209 +1,344 @@
 #include <iostream>
-#include <vector>
-using namespace std;
+#include <string>
 
-// Simple stack implementation
-template <typename T>
-class SimpleStack {
+class IntStack {
 private:
-    vector<T> data;
-public:
-    void push(T value) { data.push_back(value); }
-    T pop() { 
-        T value = data.back();
-        data.pop_back();
-        return value;
+    int* data;
+    int capacity;
+    int topIndex;
+    
+    void resize() {
+        int newCapacity = capacity * 2;
+        int* newData = new int[newCapacity];
+        for (int i = 0; i < capacity; i++) {
+            newData[i] = data[i];
+        }
+        delete[] data;
+        data = newData;
+        capacity = newCapacity;
     }
-    bool empty() { return data.empty(); }
+
+public:
+    IntStack() : capacity(10), topIndex(-1) {
+        data = new int[capacity];
+    }
+    
+    ~IntStack() {
+        delete[] data;
+    }
+    
+    void push(int value) {
+        if (topIndex == capacity - 1) {
+            resize();
+        }
+        data[++topIndex] = value;
+    }
+    
+    int pop() {
+        if (empty()) {
+            throw "Stack is empty";
+        }
+        return data[topIndex--];
+    }
+    
+    bool empty() const {
+        return topIndex == -1;
+    }
 };
 
-// Simple queue implementation
-template <typename T>
-class SimpleQueue {
+class IntQueue {
 private:
-    vector<T> data;
-    int front = 0;
-public:
-    void push(T value) { data.push_back(value); }
-    T pop() { 
-        T value = data[front++];
-        if (front > data.size()/2) {
-            data.erase(data.begin(), data.begin()+front);
-            front = 0;
+    int* data;
+    int capacity;
+    int head;
+    int tail;
+    int count;
+    
+    void resize() {
+        int newCapacity = capacity * 2;
+        int* newData = new int[newCapacity];
+        
+        for (int i = 0; i < count; i++) {
+            newData[i] = data[(head + i) % capacity];
         }
+        
+        delete[] data;
+        data = newData;
+        capacity = newCapacity;
+        head = 0;
+        tail = count;
+    }
+
+public:
+    IntQueue() : capacity(10), head(0), tail(0), count(0) {
+        data = new int[capacity];
+    }
+    
+    ~IntQueue() {
+        delete[] data;
+    }
+    
+    void push(int value) {
+        if (count == capacity) {
+            resize();
+        }
+        data[tail] = value;
+        tail = (tail + 1) % capacity;
+        count++;
+    }
+    
+    int pop() {
+        if (empty()) {
+            throw "Queue is empty";
+        }
+        int value = data[head];
+        head = (head + 1) % capacity;
+        count--;
         return value;
     }
-    bool empty() { return front >= data.size(); }
+    
+    bool empty() const {
+        return count == 0;
+    }
 };
 
 class GasStationGraph {
 private:
     struct Station {
         int id;
-        string name;
+        std::string name;
         double gasPrice;
     };
 
     struct Edge {
         int destination;
         double distance;
+        Edge* next;
     };
 
-    vector<Station> stations;
-    vector<vector<Edge>> adjacencyList;
+    struct StationNode {
+        Station station;
+        Edge* edges;
+        StationNode* next;
+    };
+
+    StationNode* head;
+    int stationCount;
+
+    StationNode* findStation(int id) {
+        StationNode* current = head;
+        while (current != nullptr) {
+            if (current->station.id == id) {
+                return current;
+            }
+            current = current->next;
+        }
+        return nullptr;
+    }
 
 public:
-    GasStationGraph() {}
+    GasStationGraph() : head(nullptr), stationCount(0) {}
 
-    void addStation(int id, string name, double price) {
-        Station newStation = {id, name, price};
-        stations.push_back(newStation);
-        adjacencyList.push_back(vector<Edge>());
+    ~GasStationGraph() {
+        StationNode* current = head;
+        while (current != nullptr) {
+            Edge* edge = current->edges;
+            while (edge != nullptr) {
+                Edge* temp = edge;
+                edge = edge->next;
+                delete temp;
+            }
+            StationNode* temp = current;
+            current = current->next;
+            delete temp;
+        }
+    }
+
+    void addStation(int id, std::string name, double price) {
+        StationNode* newNode = new StationNode();
+        newNode->station = {id, name, price};
+        newNode->edges = nullptr;
+        newNode->next = head;
+        head = newNode;
+        stationCount++;
     }
 
     void addConnection(int source, int destination, double distance) {
-        if (source >= 0 && source < stations.size() && 
-            destination >= 0 && destination < stations.size()) {
-            Edge newEdge = {destination, distance};
-            adjacencyList[source].push_back(newEdge);
+        StationNode* srcNode = findStation(source);
+        StationNode* destNode = findStation(destination);
+        
+        if (srcNode && destNode) {
+            Edge* newEdge = new Edge();
+            newEdge->destination = destination;
+            newEdge->distance = distance;
+            newEdge->next = srcNode->edges;
+            srcNode->edges = newEdge;
             
-            // For undirected graph
-            Edge reverseEdge = {source, distance};
-            adjacencyList[destination].push_back(reverseEdge);
+            Edge* reverseEdge = new Edge();
+            reverseEdge->destination = source;
+            reverseEdge->distance = distance;
+            reverseEdge->next = destNode->edges;
+            destNode->edges = reverseEdge;
         }
     }
 
     void displayNetwork() {
-        if (stations.empty()) {
-            cout << "No stations in the network yet.\n";
+        if (head == nullptr) {
+            std::cout << "No stations in the network yet.\n";
             return;
         }
 
-        cout << "\n===== CURRENT GAS STATION NETWORK =====\n";
-        for (int i = 0; i < stations.size(); i++) {
-            cout << "Station " << stations[i].id << ": " << stations[i].name 
-                 << " (Price: $" << stations[i].gasPrice << ")\n";
-            cout << "  Connected to: ";
+        std::cout << "\n===== CURRENT GAS STATION NETWORK =====\n";
+        StationNode* current = head;
+        while (current != nullptr) {
+            std::cout << "Station " << current->station.id << ": " << current->station.name 
+                     << " (Price: $" << current->station.gasPrice << ")\n";
+            std::cout << "  Connected to: ";
             
-            if (adjacencyList[i].empty()) {
-                cout << "No connections";
+            Edge* edge = current->edges;
+            if (edge == nullptr) {
+                std::cout << "No connections";
             } else {
-                for (const Edge& edge : adjacencyList[i]) {
-                    cout << stations[edge.destination].name << " (" << edge.distance << " miles), ";
+                while (edge != nullptr) {
+                    StationNode* dest = findStation(edge->destination);
+                    if (dest) {
+                        std::cout << dest->station.name << " (" << edge->distance << " miles), ";
+                    }
+                    edge = edge->next;
                 }
             }
-            cout << "\n\n";
+            std::cout << "\n\n";
+            current = current->next;
         }
     }
 
-    void DFS(int startStation) {
-        if (stations.empty()) {
-            cout << "No stations to traverse.\n";
+    void DFS(int startId) {
+        StationNode* startNode = findStation(startId);
+        if (startNode == nullptr) {
+            std::cout << "Invalid starting station.\n";
             return;
         }
 
-        vector<bool> visited(stations.size(), false);
-        SimpleStack<int> stk;
+        bool* visited = new bool[stationCount]();
+        IntStack stk;
         
-        stk.push(startStation);
-        visited[startStation] = true;
+        stk.push(startId);
+        visited[startId] = true;
         
-        cout << "\nDFS Traversal starting from " << stations[startStation].name << ":\n";
+        std::cout << "\nDFS Traversal starting from " << startNode->station.name << ":\n";
         
         while (!stk.empty()) {
-            int current = stk.pop();
-            cout << "Visited: " << stations[current].name << "\n";
+            int currentId = stk.pop();
+            StationNode* current = findStation(currentId);
+            std::cout << "Visited: " << current->station.name << "\n";
             
-            for (const Edge& edge : adjacencyList[current]) {
-                if (!visited[edge.destination]) {
-                    visited[edge.destination] = true;
-                    stk.push(edge.destination);
+            Edge* edge = current->edges;
+            while (edge != nullptr) {
+                if (!visited[edge->destination]) {
+                    visited[edge->destination] = true;
+                    stk.push(edge->destination);
                 }
+                edge = edge->next;
             }
         }
+        
+        delete[] visited;
     }
 
-    void BFS(int startStation) {
-        if (stations.empty()) {
-            cout << "No stations to traverse.\n";
+    void BFS(int startId) {
+        StationNode* startNode = findStation(startId);
+        if (startNode == nullptr) {
+            std::cout << "Invalid starting station.\n";
             return;
         }
 
-        vector<bool> visited(stations.size(), false);
-        SimpleQueue<int> q;
+        bool* visited = new bool[stationCount]();
+        IntQueue q;
         
-        q.push(startStation);
-        visited[startStation] = true;
+        q.push(startId);
+        visited[startId] = true;
         
-        cout << "\nBFS Traversal starting from " << stations[startStation].name << ":\n";
+        std::cout << "\nBFS Traversal starting from " << startNode->station.name << ":\n";
         
         while (!q.empty()) {
-            int current = q.pop();
-            cout << "Visited: " << stations[current].name << "\n";
+            int currentId = q.pop();
+            StationNode* current = findStation(currentId);
+            std::cout << "Visited: " << current->station.name << "\n";
             
-            for (const Edge& edge : adjacencyList[current]) {
-                if (!visited[edge.destination]) {
-                    visited[edge.destination] = true;
-                    q.push(edge.destination);
+            Edge* edge = current->edges;
+            while (edge != nullptr) {
+                if (!visited[edge->destination]) {
+                    visited[edge->destination] = true;
+                    q.push(edge->destination);
                 }
+                edge = edge->next;
             }
         }
+        
+        delete[] visited;
     }
 
-    void findCheapestInRange(int startStation, int maxHops) {
-        if (stations.empty()) {
-            cout << "No stations in the network.\n";
+    void findCheapestInRange(int startId, int maxHops) {
+        StationNode* startNode = findStation(startId);
+        if (startNode == nullptr) {
+            std::cout << "Invalid starting station.\n";
             return;
         }
 
-        vector<bool> visited(stations.size(), false);
-        vector<int> hopCount(stations.size(), 0);
-        SimpleQueue<int> q;
+        bool* visited = new bool[stationCount]();
+        int* hopCount = new int[stationCount]();
+        IntQueue q;
         
-        q.push(startStation);
-        visited[startStation] = true;
-        Station cheapest = stations[startStation];
+        q.push(startId);
+        visited[startId] = true;
+        Station cheapest = startNode->station;
         
         while (!q.empty()) {
-            int current = q.pop();
+            int currentId = q.pop();
+            StationNode* current = findStation(currentId);
             
-            if (stations[current].gasPrice < cheapest.gasPrice && 
-                hopCount[current] <= maxHops) {
-                cheapest = stations[current];
+            if (current->station.gasPrice < cheapest.gasPrice && 
+                hopCount[currentId] <= maxHops) {
+                cheapest = current->station;
             }
             
-            if (hopCount[current] >= maxHops) continue;
+            if (hopCount[currentId] >= maxHops) continue;
             
-            for (const Edge& edge : adjacencyList[current]) {
-                if (!visited[edge.destination]) {
-                    visited[edge.destination] = true;
-                    hopCount[edge.destination] = hopCount[current] + 1;
-                    q.push(edge.destination);
+            Edge* edge = current->edges;
+            while (edge != nullptr) {
+                if (!visited[edge->destination]) {
+                    visited[edge->destination] = true;
+                    hopCount[edge->destination] = hopCount[currentId] + 1;
+                    q.push(edge->destination);
                 }
+                edge = edge->next;
             }
         }
         
-        cout << "\nCheapest station within " << maxHops << " hops from " 
-             << stations[startStation].name << " is " << cheapest.name 
-             << " with price $" << cheapest.gasPrice << "\n";
+        std::cout << "\nCheapest station within " << maxHops << " hops from " 
+                 << startNode->station.name << " is " << cheapest.name 
+                 << " with price $" << cheapest.gasPrice << "\n";
+        
+        delete[] visited;
+        delete[] hopCount;
     }
 
-    int getStationCount() {
-        return stations.size();
+    int getStationCount() const {
+        return stationCount;
     }
 
-    string getStationName(int id) {
-        if (id >= 0 && id < stations.size()) {
-            return stations[id].name;
+    std::string getStationName(int id) {
+        StationNode* node = findStation(id);
+        if (node) {
+            return node->station.name;
         }
         return "Invalid Station ID";
     }
 };
 
 void clearInputBuffer() {
-    cin.clear();
-    // Simple alternative to numeric_limits<streamsize>::max()
-    while (cin.get() != '\n') {
+    std::cin.clear();
+    while (std::cin.get() != '\n') {
         continue;
     }
 }
@@ -213,79 +348,79 @@ int main() {
     int choice;
 
     do {
-        cout << "\n===== GAS STATION TRACKER MENU =====\n";
-        cout << "1. Add a new gas station\n";
-        cout << "2. Add connection between stations\n";
-        cout << "3. Display network\n";
-        cout << "4. Perform DFS traversal\n";
-        cout << "5. Perform BFS traversal\n";
-        cout << "6. Find cheapest gas in range\n";
-        cout << "0. Exit\n";
-        cout << "Enter your choice: ";
+        std::cout << "\n===== GAS STATION TRACKER MENU =====\n";
+        std::cout << "1. Add a new gas station\n";
+        std::cout << "2. Add connection between stations\n";
+        std::cout << "3. Display network\n";
+        std::cout << "4. Perform DFS traversal\n";
+        std::cout << "5. Perform BFS traversal\n";
+        std::cout << "6. Find cheapest gas in range\n";
+        std::cout << "0. Exit\n";
+        std::cout << "Enter your choice: ";
         
-        while (!(cin >> choice)) {
-            cout << "Invalid input. Please enter a number: ";
+        while (!(std::cin >> choice)) {
+            std::cout << "Invalid input. Please enter a number: ";
             clearInputBuffer();
         }
         clearInputBuffer();
 
         switch (choice) {
             case 1: {
-                string name;
+                std::string name;
                 double price;
                 int id = gasNetwork.getStationCount();
 
-                cout << "Enter station name: ";
-                getline(cin, name);
-                cout << "Enter gas price: $";
-                while (!(cin >> price) || price <= 0) {
-                    cout << "Invalid price. Please enter a positive number: ";
+                std::cout << "Enter station name: ";
+                std::getline(std::cin, name);
+                std::cout << "Enter gas price: $";
+                while (!(std::cin >> price) || price <= 0) {
+                    std::cout << "Invalid price. Please enter a positive number: ";
                     clearInputBuffer();
                 }
                 clearInputBuffer();
 
                 gasNetwork.addStation(id, name, price);
-                cout << "Station added successfully with ID: " << id << "\n";
+                std::cout << "Station added successfully with ID: " << id << "\n";
                 break;
             }
 
             case 2: {
                 if (gasNetwork.getStationCount() < 2) {
-                    cout << "Need at least 2 stations to create a connection.\n";
+                    std::cout << "Need at least 2 stations to create a connection.\n";
                     break;
                 }
 
                 int source, dest;
                 double distance;
 
-                cout << "Available stations:\n";
+                std::cout << "Available stations:\n";
                 for (int i = 0; i < gasNetwork.getStationCount(); i++) {
-                    cout << i << ": " << gasNetwork.getStationName(i) << "\n";
+                    std::cout << i << ": " << gasNetwork.getStationName(i) << "\n";
                 }
 
-                cout << "Enter source station ID: ";
-                while (!(cin >> source) || source < 0 || source >= gasNetwork.getStationCount()) {
-                    cout << "Invalid ID. Please enter a valid station ID: ";
+                std::cout << "Enter source station ID: ";
+                while (!(std::cin >> source) || source < 0 || source >= gasNetwork.getStationCount()) {
+                    std::cout << "Invalid ID. Please enter a valid station ID: ";
                     clearInputBuffer();
                 }
                 clearInputBuffer();
 
-                cout << "Enter destination station ID: ";
-                while (!(cin >> dest) || dest < 0 || dest >= gasNetwork.getStationCount()) {
-                    cout << "Invalid ID. Please enter a valid station ID: ";
+                std::cout << "Enter destination station ID: ";
+                while (!(std::cin >> dest) || dest < 0 || dest >= gasNetwork.getStationCount()) {
+                    std::cout << "Invalid ID. Please enter a valid station ID: ";
                     clearInputBuffer();
                 }
                 clearInputBuffer();
 
-                cout << "Enter distance between stations (miles): ";
-                while (!(cin >> distance) || distance <= 0) {
-                    cout << "Invalid distance. Please enter a positive number: ";
+                std::cout << "Enter distance between stations (miles): ";
+                while (!(std::cin >> distance) || distance <= 0) {
+                    std::cout << "Invalid distance. Please enter a positive number: ";
                     clearInputBuffer();
                 }
                 clearInputBuffer();
 
                 gasNetwork.addConnection(source, dest, distance);
-                cout << "Connection added between " << gasNetwork.getStationName(source) 
+                std::cout << "Connection added between " << gasNetwork.getStationName(source) 
                      << " and " << gasNetwork.getStationName(dest) << "\n";
                 break;
             }
@@ -296,19 +431,19 @@ int main() {
 
             case 4: {
                 if (gasNetwork.getStationCount() == 0) {
-                    cout << "No stations to traverse.\n";
+                    std::cout << "No stations to traverse.\n";
                     break;
                 }
 
                 int start;
-                cout << "Available stations:\n";
+                std::cout << "Available stations:\n";
                 for (int i = 0; i < gasNetwork.getStationCount(); i++) {
-                    cout << i << ": " << gasNetwork.getStationName(i) << "\n";
+                    std::cout << i << ": " << gasNetwork.getStationName(i) << "\n";
                 }
 
-                cout << "Enter starting station ID: ";
-                while (!(cin >> start) || start < 0 || start >= gasNetwork.getStationCount()) {
-                    cout << "Invalid ID. Please enter a valid station ID: ";
+                std::cout << "Enter starting station ID: ";
+                while (!(std::cin >> start) || start < 0 || start >= gasNetwork.getStationCount()) {
+                    std::cout << "Invalid ID. Please enter a valid station ID: ";
                     clearInputBuffer();
                 }
                 clearInputBuffer();
@@ -319,19 +454,19 @@ int main() {
 
             case 5: {
                 if (gasNetwork.getStationCount() == 0) {
-                    cout << "No stations to traverse.\n";
+                    std::cout << "No stations to traverse.\n";
                     break;
                 }
 
                 int start;
-                cout << "Available stations:\n";
+                std::cout << "Available stations:\n";
                 for (int i = 0; i < gasNetwork.getStationCount(); i++) {
-                    cout << i << ": " << gasNetwork.getStationName(i) << "\n";
+                    std::cout << i << ": " << gasNetwork.getStationName(i) << "\n";
                 }
 
-                cout << "Enter starting station ID: ";
-                while (!(cin >> start) || start < 0 || start >= gasNetwork.getStationCount()) {
-                    cout << "Invalid ID. Please enter a valid station ID: ";
+                std::cout << "Enter starting station ID: ";
+                while (!(std::cin >> start) || start < 0 || start >= gasNetwork.getStationCount()) {
+                    std::cout << "Invalid ID. Please enter a valid station ID: ";
                     clearInputBuffer();
                 }
                 clearInputBuffer();
@@ -342,26 +477,26 @@ int main() {
 
             case 6: {
                 if (gasNetwork.getStationCount() == 0) {
-                    cout << "No stations in the network.\n";
+                    std::cout << "No stations in the network.\n";
                     break;
                 }
 
                 int start, maxHops;
-                cout << "Available stations:\n";
+                std::cout << "Available stations:\n";
                 for (int i = 0; i < gasNetwork.getStationCount(); i++) {
-                    cout << i << ": " << gasNetwork.getStationName(i) << "\n";
+                    std::cout << i << ": " << gasNetwork.getStationName(i) << "\n";
                 }
 
-                cout << "Enter starting station ID: ";
-                while (!(cin >> start) || start < 0 || start >= gasNetwork.getStationCount()) {
-                    cout << "Invalid ID. Please enter a valid station ID: ";
+                std::cout << "Enter starting station ID: ";
+                while (!(std::cin >> start) || start < 0 || start >= gasNetwork.getStationCount()) {
+                    std::cout << "Invalid ID. Please enter a valid station ID: ";
                     clearInputBuffer();
                 }
                 clearInputBuffer();
 
-                cout << "Enter maximum number of hops: ";
-                while (!(cin >> maxHops) || maxHops < 1) {
-                    cout << "Invalid number. Please enter a positive integer: ";
+                std::cout << "Enter maximum number of hops: ";
+                while (!(std::cin >> maxHops) || maxHops < 1) {
+                    std::cout << "Invalid number. Please enter a positive integer: ";
                     clearInputBuffer();
                 }
                 clearInputBuffer();
@@ -371,13 +506,13 @@ int main() {
             }
 
             case 0:
-                cout << "Exiting program...\n";
+                std::cout << "Exiting program...\n";
                 break;
 
             default:
-                cout << "Invalid choice. Please try again.\n";
+                std::cout << "Invalid choice. Please try again.\n";
         }
     } while (choice != 0);
 
     return 0;
-}
+}}
