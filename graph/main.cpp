@@ -4,11 +4,11 @@ int main() {
     GasStationGraph graph;
     
     // Adding some sample stations
-    addStation(graph, "Shell", 3.45);
-    addStation(graph, "BP", 3.50);
-    addStation(graph, "Exxon", 3.40);
-    addStation(graph, "Chevron", 3.55);
-    addStation(graph, "Speedway", 3.38);
+    addStation(graph, "NOC", 3.45);
+    addStation(graph, "Gomeju", 3.50);
+    addStation(graph, "Maraki", 3.40);
+    addStation(graph, "Total", 3.55);
+    addStation(graph, "Eth", 3.38);
     
     // Adding connections
     addConnection(graph, 0, 1, 5.2);  // Shell to BP, 5.2 miles
@@ -48,7 +48,7 @@ int main() {
                 int start, end;
                 std::cout << "Enter start station ID: ";
                 std::cin >> start;
-                std::cout << "Enter end station ID: ";
+                std::cout << "EnSpeedwayter end station ID: ";
                 std::cin >> end;
                 findPath(graph, start, end);
                 break;
