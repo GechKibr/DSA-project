@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+using namespace std;
 
 class IntStack {
 private:
@@ -188,26 +189,26 @@ public:
             return;
         }
 
-        std::cout << "\n===== CURRENT GAS STATION NETWORK =====\n";
+        cout << "\n===== CURRENT GAS STATION NETWORK =====\n";
         StationNode* current = head;
         while (current != nullptr) {
-            std::cout << "Station " << current->station.id << ": " << current->station.name 
+            cout << "Station " << current->station.id << ": " << current->station.name 
                      << " (Price: $" << current->station.gasPrice << ")\n";
-            std::cout << "  Connected to: ";
+            cout << "  Connected to: ";
             
             Edge* edge = current->edges;
             if (edge == nullptr) {
-                std::cout << "No connections";
+                cout << "No connections";
             } else {
                 while (edge != nullptr) {
                     StationNode* dest = findStation(edge->destination);
                     if (dest) {
-                        std::cout << dest->station.name << " (" << edge->distance << " miles), ";
+                        cout << dest->station.name << " (" << edge->distance << " miles), ";
                     }
                     edge = edge->next;
                 }
             }
-            std::cout << "\n\n";
+            cout << "\n\n";
             current = current->next;
         }
     }
@@ -215,7 +216,7 @@ public:
     void DFS(int startId) {
         StationNode* startNode = findStation(startId);
         if (startNode == nullptr) {
-            std::cout << "Invalid starting station.\n";
+            cout << "Invalid starting station.\n";
             return;
         }
 
@@ -225,12 +226,12 @@ public:
         stk.push(startId);
         visited[startId] = true;
         
-        std::cout << "\nDFS Traversal starting from " << startNode->station.name << ":\n";
+        cout << "\nDFS Traversal starting from " << startNode->station.name << ":\n";
         
         while (!stk.empty()) {
             int currentId = stk.pop();
             StationNode* current = findStation(currentId);
-            std::cout << "Visited: " << current->station.name << "\n";
+            cout << "Visited: " << current->station.name << "\n";
             
             Edge* edge = current->edges;
             while (edge != nullptr) {
@@ -248,7 +249,7 @@ public:
     void BFS(int startId) {
         StationNode* startNode = findStation(startId);
         if (startNode == nullptr) {
-            std::cout << "Invalid starting station.\n";
+            cout << "Invalid starting station.\n";
             return;
         }
 
@@ -258,12 +259,12 @@ public:
         q.push(startId);
         visited[startId] = true;
         
-        std::cout << "\nBFS Traversal starting from " << startNode->station.name << ":\n";
+        cout << "\nBFS Traversal starting from " << startNode->station.name << ":\n";
         
         while (!q.empty()) {
             int currentId = q.pop();
             StationNode* current = findStation(currentId);
-            std::cout << "Visited: " << current->station.name << "\n";
+            cout << "Visited: " << current->station.name << "\n";
             
             Edge* edge = current->edges;
             while (edge != nullptr) {
@@ -315,7 +316,7 @@ public:
             }
         }
         
-        std::cout << "\nCheapest station within " << maxHops << " hops from " 
+        cout << "\nCheapest station within " << maxHops << " hops from " 
                  << startNode->station.name << " is " << cheapest.name 
                  << " with price $" << cheapest.gasPrice << "\n";
         
@@ -327,7 +328,7 @@ public:
         return stationCount;
     }
 
-    std::string getStationName(int id) {
+    string getStationName(int id) {
         StationNode* node = findStation(id);
         if (node) {
             return node->station.name;
@@ -337,7 +338,7 @@ public:
 };
 
 void clearInputBuffer() {
-    std::cin.clear();
+    cin.clear();
     while (std::cin.get() != '\n') {
         continue;
     }
@@ -348,39 +349,39 @@ int main() {
     int choice;
 
     do {
-        std::cout << "\n===== GAS STATION TRACKER MENU =====\n";
-        std::cout << "1. Add a new gas station\n";
-        std::cout << "2. Add connection between stations\n";
-        std::cout << "3. Display network\n";
-        std::cout << "4. Perform DFS traversal\n";
-        std::cout << "5. Perform BFS traversal\n";
-        std::cout << "6. Find cheapest gas in range\n";
-        std::cout << "0. Exit\n";
-        std::cout << "Enter your choice: ";
+        cout << "\n===== GAS STATION TRACKER MENU =====\n";
+        cout << "1. Add a new gas station\n";
+        cout << "2. Add connection between stations\n";
+        cout << "3. Display network\n";
+        cout << "4. Perform DFS traversal\n";
+        cout << "5. Perform BFS traversal\n";
+        cout << "6. Find cheapest gas in range\n";
+        cout << "0. Exit\n";
+        cout << "Enter your choice: ";
         
-        while (!(std::cin >> choice)) {
-            std::cout << "Invalid input. Please enter a number: ";
+        while (!(cin >> choice)) {
+            cout << "Invalid input. Please enter a number: ";
             clearInputBuffer();
         }
         clearInputBuffer();
 
         switch (choice) {
             case 1: {
-                std::string name;
+                string name;
                 double price;
                 int id = gasNetwork.getStationCount();
 
-                std::cout << "Enter station name: ";
-                std::getline(std::cin, name);
-                std::cout << "Enter gas price: $";
-                while (!(std::cin >> price) || price <= 0) {
-                    std::cout << "Invalid price. Please enter a positive number: ";
+                cout << "Enter station name: ";
+                getline(cin, name);
+                cout << "Enter gas price: $";
+                while (!(cin >> price) || price <= 0) {
+                    cout << "Invalid price. Please enter a positive number: ";
                     clearInputBuffer();
                 }
                 clearInputBuffer();
 
                 gasNetwork.addStation(id, name, price);
-                std::cout << "Station added successfully with ID: " << id << "\n";
+                cout << "Station added successfully with ID: " << id << "\n";
                 break;
             }
 
@@ -431,19 +432,19 @@ int main() {
 
             case 4: {
                 if (gasNetwork.getStationCount() == 0) {
-                    std::cout << "No stations to traverse.\n";
+                    cout << "No stations to traverse.\n";
                     break;
                 }
 
                 int start;
-                std::cout << "Available stations:\n";
+                cout << "Available stations:\n";
                 for (int i = 0; i < gasNetwork.getStationCount(); i++) {
-                    std::cout << i << ": " << gasNetwork.getStationName(i) << "\n";
+                    cout << i << ": " << gasNetwork.getStationName(i) << "\n";
                 }
 
-                std::cout << "Enter starting station ID: ";
-                while (!(std::cin >> start) || start < 0 || start >= gasNetwork.getStationCount()) {
-                    std::cout << "Invalid ID. Please enter a valid station ID: ";
+                cout << "Enter starting station ID: ";
+                while (!(cin >> start) || start < 0 || start >= gasNetwork.getStationCount()) {
+                    cout << "Invalid ID. Please enter a valid station ID: ";
                     clearInputBuffer();
                 }
                 clearInputBuffer();
@@ -454,19 +455,19 @@ int main() {
 
             case 5: {
                 if (gasNetwork.getStationCount() == 0) {
-                    std::cout << "No stations to traverse.\n";
+                    cout << "No stations to traverse.\n";
                     break;
                 }
 
                 int start;
-                std::cout << "Available stations:\n";
+                cout << "Available stations:\n";
                 for (int i = 0; i < gasNetwork.getStationCount(); i++) {
-                    std::cout << i << ": " << gasNetwork.getStationName(i) << "\n";
+                    cout << i << ": " << gasNetwork.getStationName(i) << "\n";
                 }
 
-                std::cout << "Enter starting station ID: ";
-                while (!(std::cin >> start) || start < 0 || start >= gasNetwork.getStationCount()) {
-                    std::cout << "Invalid ID. Please enter a valid station ID: ";
+                cout << "Enter starting station ID: ";
+                while (!(cin >> start) || start < 0 || start >= gasNetwork.getStationCount()) {
+                    cout << "Invalid ID. Please enter a valid station ID: ";
                     clearInputBuffer();
                 }
                 clearInputBuffer();
@@ -477,26 +478,27 @@ int main() {
 
             case 6: {
                 if (gasNetwork.getStationCount() == 0) {
-                    std::cout << "No stations in the network.\n";
+                    cout << "No stations in the network.\n";
                     break;
                 }
 
                 int start, maxHops;
-                std::cout << "Available stations:\n";
+                cout << "Available stations:\n";
                 for (int i = 0; i < gasNetwork.getStationCount(); i++) {
-                    std::cout << i << ": " << gasNetwork.getStationName(i) << "\n";
+                    cout << i << ": " << gasNetwork.getStationName(i) << "\n";
                 }
 
-                std::cout << "Enter starting station ID: ";
-                while (!(std::cin >> start) || start < 0 || start >= gasNetwork.getStationCount()) {
-                    std::cout << "Invalid ID. Please enter a valid station ID: ";
+                cout << "Enter starting station ID: ";
+                while (!(cin >> start) || start < 0 || start >= gasNetwork.getStationCount()) {
+                    cout << "Invalid ID. Please enter a valid station ID: ";
                     clearInputBuffer();
                 }
                 clearInputBuffer();
 
-                std::cout << "Enter maximum number of hops: ";
-                while (!(std::cin >> maxHops) || maxHops < 1) {
-                    std::cout << "Invalid number. Please enter a positive integer: ";
+                cout << "Enter maximum number of hops: ";
+                while (!(cin >> maxHops) || maxHops < 1) {
+                    
+                cout << "Invalid number. Please enter a positive integer: ";
                     clearInputBuffer();
                 }
                 clearInputBuffer();
@@ -506,13 +508,13 @@ int main() {
             }
 
             case 0:
-                std::cout << "Exiting program...\n";
+                cout << "Exiting program...\n";
                 break;
 
             default:
-                std::cout << "Invalid choice. Please try again.\n";
+                cout << "Invalid choice. Please try again.\n";
         }
     } while (choice != 0);
 
     return 0;
-}}
+}
